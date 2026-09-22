@@ -108,6 +108,9 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
         mov esi, [ebp + 8]
         xor ebx, ebx
 
+        xor ecx, ecx
+        xor edi, edi
+
         IP_Scramble:
                 cmp ebx, 64
                 jae IP_Scramble_Done
@@ -409,20 +412,74 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 or edi, ebx
 
         ; Permutation (base on the p table)
+                mov eax, edi
+                pop edi
+                pop ecx
+                pop ebx
 
+                ; 32 loop
+                push ebx
+                xor ebx, ebx 
+                xor edx, edx
 
+        Permutation_Loop:
+                cmp ebx, 32 
+                jae Permutation_Done
+
+                push ecx 
+                xor ecx, ecx
+                movzx ecx, BYTE PTR P_Table[ebx]
+                sub ecx, 1      ;เพื่อให้ Index เริ่มที่ 0
+
+                push esi 
+                mov esi, 31
+                sub esi, ecx
+                mov ecx, esi 
+                pop esi
+
+                mov esi, eax 
+                shr esi, cl
+                and esi, 1 
+
+                shl edx, 1  
+                or edx, esi 
+
+                pop ecx 
+
+                inc ebx
+                jmp Permutation_Loop
+
+        Permutation_Done:
+                pop ebx
 
         ; cross-xor then swap
-
-
+                xor ecx, edx 
+                xchg ecx, edi  
 
                 inc ebx
                 jmp Feistel_Round
 
 
+; IP^-1
         Feistel_Done:
+                mov esi, [ebp + 8]
+                        
+                        push ebx
+                        xor ebx, ebx 
+                        
+                IP_Inv_Loop:
+                        cmp ebx, 64
+                        jae IP_Inv_Done
 
+                        xor eax, eax
+                        movzx eax, BYTE PTR IP_Inv_Table[ebx]
+                        sub eax, 1
+                        
+                        inc ebx
+                        jmp IP_Inv_Loop
 
+                IP_Inv_Done:
+                        pop ebx
 
         pop edi
         pop esi
@@ -436,3 +493,7 @@ ProcessDES ENDP
 
 OPTION PROLOGUE:PrologueDef
 OPTION EPILOGUE:EpilogueDef
+
+
+; fix the tabs later cause WHAT THE FUCK are you doing???
+
