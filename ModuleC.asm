@@ -9,16 +9,16 @@ INCLUDE Irvine32.inc
 .data
         ; Initial Permutation (IP) Table - 64 bytes
         IP_Table BYTE 58, 50, 42, 34, 26, 18, 10, 2
-                BYTE 60, 52, 44, 36, 28, 20, 12, 4
-                BYTE 62, 54, 46, 38, 30, 22, 14, 6
-                BYTE 64, 56, 48, 40, 32, 24, 16, 8
-                BYTE 57, 49, 41, 33, 25, 17,  9, 1
-                BYTE 59, 51, 43, 35, 27, 19, 11, 3
-                BYTE 61, 53, 45, 37, 29, 21, 13, 5
-                BYTE 63, 55, 47, 39, 31, 23, 15, 7
+                 BYTE 60, 52, 44, 36, 28, 20, 12, 4
+                 BYTE 62, 54, 46, 38, 30, 22, 14, 6
+                 BYTE 64, 56, 48, 40, 32, 24, 16, 8
+                 BYTE 57, 49, 41, 33, 25, 17,  9, 1
+                 BYTE 59, 51, 43, 35, 27, 19, 11, 3
+                 BYTE 61, 53, 45, 37, 29, 21, 13, 5
+                 BYTE 63, 55, 47, 39, 31, 23, 15, 7
 
         ; Inverse Initial Permutation (IP^-1) Table - 64 bytes
-        IP_Inv_Table BYTE 40,  8, 48, 16, 56, 24, 64, 32
+        IP_Inv_Table    BYTE 40,  8, 48, 16, 56, 24, 64, 32
                         BYTE 39,  7, 47, 15, 55, 23, 63, 31
                         BYTE 38,  6, 46, 14, 54, 22, 62, 30
                         BYTE 37,  5, 45, 13, 53, 21, 61, 29
@@ -47,7 +47,7 @@ INCLUDE Irvine32.inc
                 BYTE 19, 13, 30,  6
                 BYTE 22, 11,  4, 25
 
-        S_BoxS1 BYTE 14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9, 0, 7
+        S_BoxS1 BYTE 14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7
                 BYTE 0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8
                 BYTE 4, 1, 14, 8, 13, 6, 2,11 ,15 ,12 ,9 ,7 ,3 ,10 ,5 ,0
                 BYTE 15 ,12 ,8 ,2 ,4 ,9 ,1 ,7 ,5 ,11 ,3 ,14 ,10 ,0 ,6 ,13
@@ -93,15 +93,45 @@ INCLUDE Irvine32.inc
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 
-ProcessDESBlock PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE 
-        push ebx
+ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
+
+; reviw the stack frame and registers used in this function again
+        push ebp
+        mov ebp, esp
+
+        push ebx        ;manual counter instead of using ecx
+        push ecx        ;l
+        push esi
+        push edi        ;r
 
 ; scramble the input with the IP
+        mov esi, [ebp + 8]
         and ebx, 00000000h
+
         IP_Scramble:
                 cmp ebx, 64
-                jge IP_Scramble_Done
+                jae IP_Scramble_Done
 
+                xor eax, eax
+                movzx eax, BYTE IP_Table[ebx]
+                sub eax, 1
+
+                push ecx
+
+                xor edx, edx
+                mov ecx, 8
+                div ecx
+
+                movzx eax, BYTE PTR [esi + eax]
+
+                mov ecx, 7
+                sub ecx, edx
+                shr eax, cl     
+                and eax, 1
+
+                pop ecx
+
+                
 
                 inc ebx
                 jmp IP_Scramble
@@ -109,7 +139,15 @@ ProcessDESBlock PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
         IP_Scramble_Done:
 
 
+
+
+        pop edi
+        pop esi
+        pop ecx
         pop ebx
+
+        pop ebp
+
 ProcessDES ENDP
 
 OPTION PROLOGUE:PrologueDef
