@@ -218,10 +218,10 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 
                 xor edi, edi
                 
-                ;s box 1
-                movzx ecx, dx
+        ;s box 1
+                movzx ecx, dx   ; (upper 16 bits) 
                 shr ecx, 10
-                and ecx, 3Fh        ; only 6 low bits 
+                and ecx, 3Fh    ; only 6 low bits 
 
                 mov esi, ecx
                 shr esi, 4
@@ -238,13 +238,177 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 shl esi, 4
                 add esi, ebx    
                 
-                movzx ebx, BYTE PTR S_BoxS1[esi]
+                movzx ebx, BYTE PTR S_BoxS1[esi]        ; fetch form the table
                 
-                shl ebx, 28         ; move to left (bit 31-28) | first s box
+                shl ebx, 28     ; move to left (bit 31-28) 
                 or edi, ebx
 
+        ;s box 2
+                movzx ecx, dx
+                shr ecx, 4
+                and ecx, 3Fh 
 
-        ; Permutation
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                
+                mov ebx, ecx
+                and ebx, 1 
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1 
+                and ebx, 0Fh 
+
+                shl esi, 4
+                add esi, ebx    
+                
+                movzx ebx, BYTE PTR S_BoxS2[esi]   
+                
+                shl ebx, 24
+                or edi, ebx
+
+        ;s box 3
+                movzx ecx, dx
+                and ecx, 0Fh 
+                shl ecx, 2      ;
+                
+                mov esi, eax
+                shr esi, 30 
+                or ecx, esi 
+
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                mov ebx, ecx
+                and ebx, 1
+                or esi, ebx         ; esi = row
+
+                mov ebx, ecx
+                shr ebx, 1
+                and ebx, 0Fh        ; ebx = column
+
+                shl esi, 4
+                add esi, ebx
+                movzx ebx, BYTE PTR S_BoxS3[esi]
+                
+                shl ebx, 20 
+                or edi, ebx
+
+        ; s box 4
+                mov ecx, eax
+                shr ecx, 24     ;
+                and ecx, 3Fh
+
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                mov ebx, ecx
+                and ebx, 1
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1
+                and ebx, 0Fh 
+
+                shl esi, 4
+                add esi, ebx
+                movzx ebx, BYTE PTR S_BoxS4[esi]
+                
+                shl ebx, 16 
+                or edi, ebx
+
+        ; s box 5
+                mov ecx, eax
+                shr ecx, 18     ;
+                and ecx, 3Fh
+
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                mov ebx, ecx
+                and ebx, 1
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1
+                and ebx, 0Fh 
+
+                shl esi, 4
+                add esi, ebx
+                movzx ebx, BYTE PTR S_BoxS5[esi]
+                
+                shl ebx, 12
+                or edi, ebx
+
+        ; s box 6
+                mov ecx, eax
+                shr ecx, 12     ;
+                and ecx, 3Fh
+
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                mov ebx, ecx
+                and ebx, 1
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1
+                and ebx, 0Fh 
+
+                shl esi, 4      ;
+                add esi, ebx
+                movzx ebx, BYTE PTR S_BoxS6[esi]
+                
+                shl ebx, 8
+                or edi, ebx
+
+        ; s box 7
+                mov ecx, eax
+                shr ecx, 6     ;
+                and ecx, 3Fh
+
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                mov ebx, ecx
+                and ebx, 1
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1
+                and ebx, 0Fh 
+
+                shl esi, 4      ;
+                add esi, ebx
+                movzx ebx, BYTE PTR S_BoxS7[esi]
+                
+                shl ebx, 4      ;
+                or edi, ebx
+
+        ; s box 8
+                mov ecx, eax
+                and ecx, 3Fh
+
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                mov ebx, ecx
+                and ebx, 1
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1
+                and ebx, 0Fh 
+
+                shl esi, 4
+                add esi, ebx
+                movzx ebx, BYTE PTR S_BoxS8[esi]
+
+                or edi, ebx
+
+        ; Permutation (base on the p table)
 
 
 
