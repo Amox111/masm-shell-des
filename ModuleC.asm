@@ -152,6 +152,9 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
         
         IP_Scramble_Done:
 
+
+
+
 ; rn can get that 64 bit and scrambled | here we are at scramble IP next do 16 rounds of Feistel then scramble back
 ; but the split in the Feistel is already done
 
@@ -186,8 +189,8 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                         shr esi, cl     
                         and esi, 1
 
-                        shl eax, 1      ; Shift lower 32 bits left 
-                        rcl edx, 1      ; Shift upper 16 bits left 
+                        shl eax, 1      ; shift lower 32 bits left 
+                        rcl edx, 1      ; shift upper 16 bits left 
                         
                         or eax, esi
 
@@ -197,15 +200,48 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 Expansion_Done:
                         pop ebx
 
-;EDX:EAX
+;EDX:EAX rn it's 48 bits then make it bcak to 32 bits | s-box 8 * 6 
 
         ; subkey
+                lea esi, [ebx + ebx*2]  ; esi = ebx * 3
+                add esi, esi            ; esi = esi * 2 
                 
-
-
-
+                add esi, [ebp + 12]     ; + Base Pointer of Key Schedule from Stack
+                
+                xor eax, DWORD PTR [esi]      
+                xor dx, WORD PTR [esi + 4]
+                
         ; S-box
+                push ebx 
+                push ecx 
+                push edi    
+                
+                xor edi, edi
+                
+                ;s box 1
+                movzx ecx, dx
+                shr ecx, 10
+                and ecx, 3Fh        ; only 6 low bits 
 
+                mov esi, ecx
+                shr esi, 4
+                and esi, 2
+                
+                mov ebx, ecx
+                and ebx, 1 
+                or esi, ebx 
+
+                mov ebx, ecx
+                shr ebx, 1 
+                and ebx, 0Fh 
+
+                shl esi, 4
+                add esi, ebx    
+                
+                movzx ebx, BYTE PTR S_BoxS1[esi]
+                
+                shl ebx, 28         ; move to left (bit 31-28) | first s box
+                or edi, ebx
 
 
         ; Permutation
