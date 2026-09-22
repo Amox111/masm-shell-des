@@ -95,7 +95,7 @@ OPTION EPILOGUE:NONE
 
 ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
 
-; reviw the stack frame and registers used in this function again
+; reviw the stack frame and registers used in this again
         push ebp
         mov ebp, esp
 
@@ -106,14 +106,14 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
 
 ; scramble the input with the IP
         mov esi, [ebp + 8]
-        and ebx, 00000000h
+        xor ebx, ebx
 
         IP_Scramble:
                 cmp ebx, 64
                 jae IP_Scramble_Done
 
                 xor eax, eax
-                movzx eax, BYTE IP_Table[ebx]
+                movzx eax, BYTE PTR IP_Table[ebx]
                 sub eax, 1
 
                 push ecx
@@ -124,6 +124,7 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
 
                 movzx eax, BYTE PTR [esi + eax]
 
+                ; check how much to shift 7 - Bit Offset
                 mov ecx, 7
                 sub ecx, edx
                 shr eax, cl     
@@ -131,8 +132,21 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
 
                 pop ecx
 
-                
+; fill the left and right | ECX:EDI
+                cmp ebx, 32
+                jb Pack_Left 
 
+                ; pack rigjt edi
+                shl edi, 1      ; shift rihgt half
+                or edi, eax     ; Insert bit into right half
+                jmp Pack_Done
+
+        Pack_Left:
+                ;pack left ecx
+                shl ecx, 1      ; shift left half
+                or ecx, eax     ; insert bit into lrft half
+
+        Pack_Done:
                 inc ebx
                 jmp IP_Scramble
         
@@ -147,6 +161,7 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
         pop ebx
 
         pop ebp
+        ret 8
 
 ProcessDES ENDP
 
