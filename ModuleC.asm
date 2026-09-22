@@ -141,16 +141,27 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 or edi, eax     ; Insert bit into right half
                 jmp Pack_Done
 
-        Pack_Left:
-                ;pack left ecx
-                shl ecx, 1      ; shift left half
-                or ecx, eax     ; insert bit into lrft half
+                Pack_Left:
+                        ;pack left ecx
+                        shl ecx, 1      ; shift left half
+                        or ecx, eax     ; insert bit into lrft half
 
-        Pack_Done:
-                inc ebx
-                jmp IP_Scramble
-        
+                Pack_Done:
+                        inc ebx
+                        jmp IP_Scramble
+
+; rn can get that 64 bit and scrambled | here we are at scramble IP next do 16 rounds of Feistel then scramble back
+; but the split in the Feistel is already done
+
+; Feistel flow: split -> cipher function: expansion, subkey, s-box, permutaion -> cross xor -> swap
+
+; Feistel whatever 16 round start here:
         IP_Scramble_Done:
+
+
+
+
+
 
 
 
