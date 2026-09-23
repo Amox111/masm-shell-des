@@ -37,7 +37,7 @@ INCLUDE Irvine32.inc
                 BYTE 28, 29, 30, 31, 32, 1
 
 
-; RIMITIVE FUNCTIONS FOR THE DATA ENCRYPTION ALGORITHM
+; Primitive functions for the Data Encryption Standard.
         P_Table BYTE 16,  7, 20, 21
                 BYTE 29, 12, 28, 17
                 BYTE  1, 15, 23, 26
@@ -165,6 +165,7 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
 
 ;======================================================================
 ; Feistel whatever 16 round start here:
+        xor ebx, ebx            ; round counter
         xor eax, eax    ; eax -> lower 32
         xor edx, edx    ; edx -> upper 16 
 
@@ -254,7 +255,7 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 mov esi, ecx
                 shr esi, 4
                 and esi, 2
-                
+
                 mov ebx, ecx
                 and ebx, 1 
                 or esi, ebx 
@@ -275,7 +276,6 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 movzx ecx, dx
                 and ecx, 0Fh 
                 shl ecx, 2      ;
-                
                 mov esi, eax
                 shr esi, 30 
                 or ecx, esi 
@@ -460,26 +460,73 @@ ProcessDES PROC pDataBlock:PTR BYTE, pKeySchedule:PTR BYTE
                 jmp Feistel_Round
 
 
-; IP^-1
+; Apply the inverse initial permutation and write the result in place.
         Feistel_Done:
                 mov esi, [ebp + 8]
-                        
-                        push ebx
-                        xor ebx, ebx 
-                        
-                IP_Inv_Loop:
-                        cmp ebx, 64
-                        jae IP_Inv_Done
 
-                        xor eax, eax
-                        movzx eax, BYTE PTR IP_Inv_Table[ebx]
-                        sub eax, 1
-                        
-                        inc ebx
-                        jmp IP_Inv_Loop
+                ; The final Feistel swap is R16 || L16.
+                push ebx
+                push esi
+                xor ebx, ebx
+                xor eax, eax            ; output low 32 bits
+                xor edx, edx            ; output high 32 bits
 
-                IP_Inv_Done:
-                        pop ebx
+        IP_Inv_Loop:
+                cmp ebx, 64
+                jae IP_Inv_Done
+
+                movzx esi, BYTE PTR IP_Inv_Table[ebx]
+                dec esi
+
+                ; Select a bit from R16 (EDI) or L16 (ECX).
+                push ecx
+                cmp esi, 32
+                jb IP_Inv_From_Right
+
+                sub esi, 32
+                mov ecx, 31
+                sub ecx, esi
+                mov esi, DWORD PTR [esp]
+                shr esi, cl
+                and esi, 1
+                jmp IP_Inv_Append
+
+        IP_Inv_From_Right:
+                mov ecx, 31
+                sub ecx, esi
+                mov esi, edi
+                shr esi, cl
+                and esi, 1
+
+        IP_Inv_Append:
+                pop ecx
+                cmp ebx, 32
+                jb IP_Inv_Append_High
+
+                shl eax, 1
+                or eax, esi
+                inc ebx
+                jmp IP_Inv_Loop
+
+        IP_Inv_Append_High:
+                shl edx, 1
+                or edx, esi
+                inc ebx
+                jmp IP_Inv_Loop
+
+        IP_Inv_Done:
+                pop esi
+                pop ebx
+
+                ; Store big-endian bytes while preserving the numeric result.
+                push edx
+                push eax
+                bswap edx
+                bswap eax
+                mov DWORD PTR [esi], edx
+                mov DWORD PTR [esi + 4], eax
+                pop eax
+                pop edx
 
         pop edi
         pop esi
@@ -493,7 +540,4 @@ ProcessDES ENDP
 
 OPTION PROLOGUE:PrologueDef
 OPTION EPILOGUE:EpilogueDef
-
-
-; fix the tabs later cause WHAT THE FUCK are you doing???
 
