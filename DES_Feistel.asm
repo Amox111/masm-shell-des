@@ -534,6 +534,9 @@ IPInvDone:
 
 ProcessDES ENDP
 
+OPTION PROLOGUE:PrologueDef
+OPTION EPILOGUE:EpilogueDef
+
 EncryptBuffer PROC USES ebx ecx edx esi edi \
     pInput:PTR BYTE, inputSize:DWORD, pOutput:PTR BYTE, pOutputSize:PTR DWORD, pSubkeys:PTR BYTE
     LOCAL padLen:DWORD
@@ -553,7 +556,7 @@ EBCopyLoop:
     jmp     EBCopyLoop
 EBCopyDone:
     mov     eax, inputSize
-    xor     ex, edx
+    xor     edx, edx
     mov     ecx, BlockSize
     div     ecx
     mov     eax, BlockSize
@@ -661,7 +664,7 @@ DBBlockLoop:
     add     esi, BlockSize
     dec     ecx
     jmp     DBBlockLoop
-DBlockDone:
+DBBlockDone:
     mov     esi, pOutput
     add     esi, inputSize
     dec     esi
@@ -688,6 +691,5 @@ DBFailed:
     ret
 DecryptBuffer ENDP
 
-OPTION PROLOGUE:PrologueDef
-OPTION EPILOGUE:EpilogueDef
+END
 
