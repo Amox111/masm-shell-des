@@ -1,11 +1,14 @@
 TITLE Module C: DES 16-Round Feistel Core Engine
 
 .386
-.model flat, stdcall
-
+;.model flat, stdcall
+;
 INCLUDE C:\Irvine\Irvine32.inc
 
 ProcessDES PROTO :PTR BYTE, :PTR BYTE
+
+PUBLIC EncryptBuffer
+PUBLIC DecryptBuffer
  
 BlockSize       EQU 8
 KeyScheduleSize EQU 96
@@ -208,6 +211,7 @@ ExpansionDone:
         xchg bh, bl
         xor  dx, bx
         pop  ebx
+        
         
 ; S-box
         push ebx 
