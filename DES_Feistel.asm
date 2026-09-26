@@ -165,8 +165,13 @@ FeistelRound:
         cmp ebx, 16
         jae FeistelDone
 
-        push ebx
-        xor ebx, ebx
+        push ebx               ; save round
+        push ecx               ; save L(i-1)
+
+        xor eax, eax           ; RESET expansion
+        xor edx, edx           ; RESET expansion
+        xor ebx, ebx           ; expansion counter
+        
 ; Expansion
 ExpansionLoop:
         cmp ebx, 48
@@ -194,7 +199,13 @@ ExpansionLoop:
         jmp ExpansionLoop
 
 ExpansionDone:
-        pop ebx
+
+        ; DO NOT pop here.
+        ; Stack:
+        ;   [esp]   = saved L(i-1)
+        ;   [esp+4] = saved round number
+
+        mov ebx, DWORD PTR [esp+4]
 
 ; subkey
         lea esi, [ebx + ebx*2]  ; esi = ebx * 3
@@ -448,91 +459,109 @@ PermutationLoop:
         jmp PermutationLoop
 
 PermutationDone:
-        pop ebx
 
-; cross-xor then swap
-        xor ecx, edx 
-        xchg ecx, edi  
+                pop ebx              ; restore permutation EBX
+        pop ecx              ; ECX = saved L(i-1)
+        pop ebx              ; EBX = saved round number
+
+        xor ecx, edx
+        xchg ecx, edi
 
         inc ebx
         jmp FeistelRound
 
-
 FeistelDone:
-        mov esi, [ebp + 8] 
-        push esi         
-        
-        xor esi, esi       
-        xor edx, edx        
-        
-        push ebx
-        xor ebx, ebx   
-        
+
+        xchg ecx, edi
+
+        xor esi, esi
+        xor eax, eax
+        xor ebx, ebx    
+
 IPInvLoop:
         cmp ebx, 64
         jae IPInvDone
 
-        xor eax, eax
-        movzx eax, BYTE PTR IPInvTable[ebx]
-        sub eax, 1
+        xor edx, edx
+        movzx edx, BYTE PTR IPInvTable[ebx]
+        dec edx
 
-        cmp eax, 32
-        jb ExtractEDI
-        
-        push ecx
-        push edx
-        sub eax, 32
-        mov edx, 31
-        sub edx, eax
-        xchg edx, ecx  
+        cmp edx, 32
+        jb IPInvFromR
+
+        ; ------------------------------------------------
+        ; IP^-1 position 32..63 -> L16 = EDI
+        ; ------------------------------------------------
+
+        sub edx, 32
+
+        push edi
+
+        mov ecx, 31
+        sub ecx, edx
+
+        mov edx, edi
         shr edx, cl
         and edx, 1
-        mov eax, edx
-        pop edx
-        pop ecx
-        jmp AppendBit
 
-ExtractEDI:
-        push edi
-        push ecx
-        push edx
-        mov edx, 31
-        sub edx, eax
-        mov ecx, edx
-        shr edi, cl
-        and edi, 1
-        mov eax, edi 
-        pop edx
-        pop ecx
         pop edi
+        jmp IPInvAppend
 
-AppendBit:
+
+IPInvFromR:
+
+        ; ------------------------------------------------
+        ; IP^-1 position 0..31 -> R16 = ECX
+        ; ------------------------------------------------
+
+        push ecx
+
+        mov ecx, 31
+        sub ecx, edx
+
+        mov edx, DWORD PTR [esp]
+        shr edx, cl
+        and edx, 1
+
+        pop ecx
+
+
+IPInvAppend:
+
         cmp ebx, 32
-        jb PackEDX
+        jb IPInvPackFirst
+
+        shl eax, 1
+        or eax, edx
+        jmp IPInvNext
+
+
+IPInvPackFirst:
+
         shl esi, 1
-        or esi, eax
-        jmp LoopEnd
-PackEDX:
-        shl edx, 1
-        or edx, eax
-LoopEnd:
+        or esi, edx
+
+
+IPInvNext:
+
         inc ebx
         jmp IPInvLoop
 
+
 IPInvDone:
-        pop ebx 
-        pop eax 
-        
-        bswap edx 
-        mov [eax], edx
+
+        mov edi, [ebp + 8]
+
         bswap esi
-        mov [eax + 4], esi
+        mov DWORD PTR [edi], esi
+
+        bswap eax
+        mov DWORD PTR [edi + 4], eax
 
         pop edi
         pop esi
         pop ecx
         pop ebx
-
         pop ebp
         ret 8
 
